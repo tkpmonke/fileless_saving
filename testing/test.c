@@ -35,8 +35,10 @@ int main(void) {
 
 	printf("Serializing Data\n");
 
-	fls_initialize("./test");
+	fls_initialize(NULL);
 	fls_serialize("data", &data);
 	fls_serialize("array", &array);
 	fls_finish();
+
+	return 0;
 }

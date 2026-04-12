@@ -1,5 +1,57 @@
-#pragma once
+/* 
+ * Fileless Saving v1.0
+ *
+ * Copyright (c) 2026 tkpmonke
+ * 
+ * This software is provided ‘as-is’, without any express or implied
+ * warranty. In no event will the authors be held liable for any damages
+ * arising from the use of this software.
+ * 
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ * 
+ * 1. The origin of this software must not be misrepresented; you must not
+ * claim that you wrote the original software. If you use this software
+ * in a product, an acknowledgment in the product documentation would be
+ * appreciated but is not required.
+ * 
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ * misrepresented as being the original software.
+ * 
+ * 3. This notice may not be removed or altered from any source
+ * distribution.
+ *
+ * Disclamer:
+ *
+ * Please, for the love of god, don't use this library for literally anything
+ * even slightly important. I don't even know if this library is capable of
+ * blowing up my computer or not.
+ *
+ * However if you are insane enough, heres an example :3
+ *
+ * struct testing_struct {
+ * 	int integer;
+ * } test_struct = {
+ * 	.integer = 5
+ * };
+ * 
+ * void serialize() {
+ * 	test_struct.integer += 2;
+ * 	fls_initialize(NULL);
+ * 	fls_serialize("test_struct", (void*)&test_struct);
+ * 	fls_finish();
+ * }
+ *
+ * Now the next time the program is ran, test_struct.integer will be greater by 2 :D
+*/
 
+#if !defined(_FILELESS_SAVING_H_)
+#define _FILELESS_SAVING_H_
+
+/***** FUNCTION DECLARATIONS *****/
+
+/* if exe_path is NULL, use the exe calling fls_initialize */
 void fls_initialize(const char* exe_path);
 
 /* 
@@ -9,23 +61,35 @@ void fls_initialize(const char* exe_path);
  */
 void fls_serialize(const char* symbol_name, void* data);
 
+/* cleans up from fls_initialize */
 void fls_finish(void);
+
+/***** FUNCTION IMPLEMENTATIONS *****/
 
 #if defined(FLS_IMPLEMENTATION)
 
 #if defined(__linux__) || defined(__unix__)
 
-#include <elf.h>
-#include <stdio.h>
+#if !defined(_POSIX_C_SOURCE)
+#define _POSIX_C_SOURCE 200112
+#endif
 
+#include <stdio.h>
 #include <assert.h>
 #include <stdlib.h>
 #include <memory.h>
+
+#include <elf.h>
 #include <fcntl.h>
-#include <errno.h>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/sendfile.h>
+
+#if defined(__linux)
+#include <linux/limits.h>
+#elif !defined(PATH_MAX)
+#define PATH_MAX 2048
+#endif
 
 typedef struct fls_instance_elf_t {
 	union {
@@ -93,8 +157,9 @@ void _fls_initialize_elf_x64() {
 
 	_fls_instance.shstrtab = malloc(_fls_instance.x64.shstrtab_hdr.sh_size);
 	assert(fread(_fls_instance.shstrtab, _fls_instance.x64.shstrtab_hdr.sh_size, 1, _fls_instance.file));
-
-	for (int i = 0; i < _fls_instance.x64.header.e_shnum; ++i) {
+ 
+	int i;
+	for (i = 0; i < _fls_instance.x64.header.e_shnum; ++i) {
 		Elf64_Shdr* shdr = &shdrs[i];
 		const char* section_name = _fls_instance.shstrtab + shdr->sh_name;
 
@@ -138,8 +203,9 @@ void _fls_initialize_elf_x32() {
 
 	_fls_instance.shstrtab = malloc(_fls_instance.x32.shstrtab_hdr.sh_size);
 	assert(fread(_fls_instance.shstrtab, _fls_instance.x32.shstrtab_hdr.sh_size, 1, _fls_instance.file));
-
-	for (int i = 0; i < _fls_instance.x32.header.e_shnum; ++i) {
+ 
+	int i;
+	for (i = 0; i < _fls_instance.x32.header.e_shnum; ++i) {
 		Elf32_Shdr* shdr = &shdrs[i];
 		const char* section_name = _fls_instance.shstrtab + shdr->sh_name;
 
@@ -168,6 +234,14 @@ void _fls_initialize_elf_x32() {
 void fls_initialize(const char* exe_path) {
 	memset(&_fls_instance, 0, sizeof(fls_instance_elf_t));
 
+	if (exe_path == NULL) {
+		static char buf[PATH_MAX];
+		ssize_t g = readlink("/proc/self/exe", buf, PATH_MAX);
+		assert(g != -1);
+
+		exe_path = buf;
+	}
+
 	int rfd = open(exe_path, O_RDONLY);
 
 	unlink(exe_path);
@@ -176,7 +250,7 @@ void fls_initialize(const char* exe_path) {
 	_fls_copy_file(fd, rfd);
 	close(rfd);
 
-	_fls_instance.file = fdopen(fd, "w+");
+	_fls_instance.file = (FILE*)fdopen(fd, "w+");
 	assert(_fls_instance.file != NULL && "File could not be loaded");
 	
 	unsigned char e_ident[EI_NIDENT];
@@ -191,11 +265,9 @@ void fls_initialize(const char* exe_path) {
 
 	fseek(_fls_instance.file, 0, SEEK_SET);
 	if (e_ident[EI_CLASS] == ELFCLASS64) {
-		printf("using ELF64\n");
 		_fls_instance.type = TYPE_X64;
 		_fls_initialize_elf_x64();
 	} else {
-		printf("using ELF32\n");
 		_fls_instance.type = TYPE_X32;
 		_fls_initialize_elf_x32();
 	}
@@ -203,7 +275,8 @@ void fls_initialize(const char* exe_path) {
 
 /* seeks _fls_instance.file to location at addr */
 void _fls_resolve_elf_x64_addr(Elf64_Addr addr) {
-	for (int i = 0; i < _fls_instance.x64.header.e_phnum; ++i) {
+	int i;
+	for (i = 0; i < _fls_instance.x64.header.e_phnum; ++i) {
 		Elf64_Phdr* phdr = &_fls_instance.x64.program_hdrs[i];
 		
 		if (phdr == NULL || phdr->p_type != PT_LOAD) {
@@ -225,7 +298,8 @@ void _fls_resolve_elf_x64_addr(Elf64_Addr addr) {
 }
 
 void _fls_resolve_elf_x32_addr(Elf64_Addr addr) {
-	for (int i = 0; i < _fls_instance.x32.header.e_phnum; ++i) {
+	int i;
+	for (i = 0; i < _fls_instance.x32.header.e_phnum; ++i) {
 		Elf32_Phdr* phdr = &_fls_instance.x32.program_hdrs[i];
 		
 		if (phdr == NULL || phdr->p_type != PT_LOAD) {
@@ -247,7 +321,8 @@ void _fls_resolve_elf_x32_addr(Elf64_Addr addr) {
 }
 
 void _fls_serialize_elf_x64(const char* symbol_name, void* data) {
-	for (int i = 0; i < _fls_instance.x64.symtab_hdr.sh_size/sizeof(Elf64_Sym); ++i) {
+	long unsigned int i;
+	for (i = 0; i < _fls_instance.x64.symtab_hdr.sh_size/sizeof(Elf64_Sym); ++i) {
 		Elf64_Sym* sym = &_fls_instance.x64.symtab[i];
 		const char* sym_name = sym->st_name + _fls_instance.strtab;
 		
@@ -262,7 +337,8 @@ void _fls_serialize_elf_x64(const char* symbol_name, void* data) {
 }
 
 void _fls_serialize_elf_x32(const char* symbol_name, void* data) {
-	for (int i = 0; i < _fls_instance.x32.symtab_hdr.sh_size/sizeof(Elf64_Sym); ++i) {
+	long unsigned int i;
+	for (i = 0; i < _fls_instance.x32.symtab_hdr.sh_size/sizeof(Elf64_Sym); ++i) {
 		Elf32_Sym* sym = &_fls_instance.x32.symtab[i];
 		const char* sym_name = sym->st_name + _fls_instance.strtab;
 		
@@ -308,6 +384,6 @@ void fls_finish() {
 	}
 }
 
-#endif
-
+#endif /* __linux__ || __unix__ */
 #endif /* FLS_IMPLEMENTATION */
+#endif /* _FILELESS_SAVING_H_ */
