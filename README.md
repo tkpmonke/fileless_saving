@@ -7,3 +7,9 @@ the roadblocks put in place to prevent exactly this.
 
 ## Disclamer
 This is not a useful project. You should never use this. This was simply made to see if it could be done.
+
+## Limitations
+At the moment (and probably forever), you can not save pointers (this includes strings). You also can't save data with a different size as the original data.
+You can kind of get around this by allocating more room than you need, and simply using the larger buffer.
+
+This project only works on linux using ELF32 and ELF64 at the moment, though I'd like to add Windows PE files as well. (If that is even possible lol)
