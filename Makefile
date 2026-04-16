@@ -1,4 +1,4 @@
-CFLAGS = -std=c89 -O2 -Wall -Wextra
+CFLAGS = -std=c89 -O2 -Wall -Wextra -fPIE
 
 default: 
 	gcc $(CFLAGS) testing/test.c -o testing/test

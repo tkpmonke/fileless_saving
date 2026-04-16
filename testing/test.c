@@ -35,10 +35,10 @@ int main(void) {
 
 	printf("Serializing Data\n");
 
-	fls_initialize(NULL);
-	fls_serialize("data", &data);
-	fls_serialize("array", &array);
-	fls_finish();
+	fls_binary_t* binary = fls_initialize();
+	fls_serialize_from_symbol_name(binary, "data", &data);
+	fls_serialize_from_pointer(binary, &array, sizeof(array));
+	fls_finish(binary);
 
 	return 0;
 }
