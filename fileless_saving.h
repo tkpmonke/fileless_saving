@@ -39,8 +39,8 @@
  * void serialize() {
  * 	test_struct.integer += 2;
  * 	fls_binary_t* binary = fls_initialize();
- * 	fls_serialize_from_symbol_name("test_struct", (void*)&test_struct);
- * 	fls_finish();
+ * 	fls_serialize_from_symbol_name(binary, "test_struct", (void*)&test_struct);
+ * 	fls_finish(binary);
  * }
  *
  * Now the next time the program is ran, test_struct.integer will be greater by 2 :D
