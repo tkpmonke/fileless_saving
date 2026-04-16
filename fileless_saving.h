@@ -38,8 +38,8 @@
  * 
  * void serialize() {
  * 	test_struct.integer += 2;
- * 	fls_initialize(NULL);
- * 	fls_serialize("test_struct", (void*)&test_struct);
+ * 	fls_binary_t* binary = fls_initialize();
+ * 	fls_serialize_from_symbol_name("test_struct", (void*)&test_struct);
  * 	fls_finish();
  * }
  *
