@@ -30,20 +30,16 @@
  *
  * However if you are insane enough, heres an example :3
  *
- * struct testing_struct {
- * 	int integer;
- * } test_struct = {
- * 	.integer = 5
- * };
+ * int integer = 0;
  * 
  * void serialize() {
- * 	test_struct.integer += 2;
+ * 	integer += 2;
  * 	fls_binary_t* binary = fls_initialize();
- * 	fls_serialize_from_symbol_name("test_struct", (void*)&test_struct);
+ * 	fls_serialize_from_symbol_name("integer", (void*)&integer);
  * 	fls_finish();
  * }
  *
- * Now the next time the program is ran, test_struct.integer will be greater by 2 :D
+ * Now the next time the program is ran, integer will be greater by 2 :D
 */
 
 #if !defined(_FILELESS_SAVING_H_)
@@ -331,6 +327,8 @@ void fls_finish(fls_binary_t* binary) {
 	} if (binary->file) {
 		fclose(binary->file);
 	}
+
+	_fls_allocator.free(binary);
 }
 
 #endif /* __linux__ || __unix__ */
