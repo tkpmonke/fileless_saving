@@ -35,8 +35,8 @@
  * void serialize() {
  * 	integer += 2;
  * 	fls_binary_t* binary = fls_initialize();
- * 	fls_serialize_from_symbol_name("integer", (void*)&integer);
- * 	fls_finish();
+ * 	fls_serialize_from_symbol_name(binary, "integer", (void*)&integer);
+ * 	fls_finish(binary);
  * }
  *
  * Now the next time the program is ran, integer will be greater by 2 :D
@@ -314,7 +314,7 @@ void fls_serialize_from_pointer(fls_binary_t* binary, void* data, unsigned long 
 }
 
 void fls_finish(fls_binary_t* binary) {
-	if (binary->symtab) {
+	if (binary->symtab) {persistant
 		_fls_allocator.free(binary->symtab);
 	} if (binary->program_hdrs) {
 		_fls_allocator.free(binary->program_hdrs);
