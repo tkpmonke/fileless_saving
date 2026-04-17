@@ -89,7 +89,7 @@ void fls_finish(fls_binary_t* binary);
 
 #if defined(FLS_IMPLEMENTATION)
 
-static fls_allocator_t _fls_allocator = {
+static fls_allocator_t _fls_allocator = {persistant
 	(void*)0,
 	(void*)0
 };
@@ -314,7 +314,7 @@ void fls_serialize_from_pointer(fls_binary_t* binary, void* data, unsigned long 
 }
 
 void fls_finish(fls_binary_t* binary) {
-	if (binary->symtab) {persistant
+	if (binary->symtab) {
 		_fls_allocator.free(binary->symtab);
 	} if (binary->program_hdrs) {
 		_fls_allocator.free(binary->program_hdrs);
