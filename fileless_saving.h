@@ -89,7 +89,7 @@ void fls_finish(fls_binary_t* binary);
 
 #if defined(FLS_IMPLEMENTATION)
 
-static fls_allocator_t _fls_allocator = {persistant
+static fls_allocator_t _fls_allocator = {
 	(void*)0,
 	(void*)0
 };
